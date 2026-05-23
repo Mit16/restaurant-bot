@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Kitchen Dashboard - Spice Garden</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: sans-serif;
+            background: #f5f5f0;
+            padding: 24px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: #2c2c2a;
+        }
+
+        #orders {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minimax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .order-card {
+            background: #fff;
+            border: 0.5px solid #d3d1c7;
+            border-radius: 12px;
+            padding: 16px;
+            animation: pop 0.3s ease;
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .order-id {
+            font-size: 12px;
+            color: #888780;
+        }
+
+        .order-time {
+            font-size: 12px;
+            color: #888780;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            padding: 4px 0;
+            color: #2c2c2a;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            font-weight: 500;
+            border-top: 0.5px solid #d3d1c7;
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+
+        .status-btn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 8px;
+            border: 0.5px solid #d3d1c7;
+            border-radius: 8px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            color: #2c2c2a;
+        }
+
+        .status-btn:hover {
+            background: #f1efe8;
+        }
+
+        .status-btn.done {
+            border-color: #1D9E75;
+            color: #0F6E56;
+        }
+
+        .new-badge {
+            background: #E1F5EE;
+            color: #085041;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Kitchen Dashboard</h1>
+    <div id="orders">
+        <p style="color:#888780;font-size:14px">Waiting for orders...</p>
+    </div>
+
+    <script>
+        const socket = io();
+        const container = document.getElementById('orders');
+
+        socket.on('new_order', (order) => {
+            const existing = document.querySelector('.placeholder');
+            if (existing) existing.remove();
+
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            card.id = `order-${order.orderId}`;
+
+            const items = order.items.map(i =>
+                `<div class="item-row"><span>${i.qty}x ${i.item}</span><span>₹${i.price * i.qty}</span></div>`
+            ).join('');
+
+            card.innerHTML = `
+        <div class="order-header">
+          <span class="order-id">#${order.orderId.slice(-6).toUpperCase()}</span>
+          <span class="new-badge">NEW</span>
+          <span class="order-time">${order.time}</span>
+        </div>
+        ${items}
+        <div class="total-row"><span>Total</span><span>₹${order.total}</span></div>
+        <button class="status-btn" onclick="markReady('${order.orderId}', this)">Mark as Ready</button>
+      `;
+
+            container.prepend(card);
+        });
+
+        function markReady(orderId, btn) {
+            btn.textContent = 'Ready';
+            btn.classList.add('done');
+            btn.disabled = true;
+            fetch(`/order/${orderId}/ready`, { method: 'POST' });
+        }
+    </script>
+</body>
+
+</html>
